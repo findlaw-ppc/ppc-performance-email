@@ -48,6 +48,9 @@
               <button id="refreshModelsBtn" class="shrink-0 px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">Refresh models</button>
             </div>
             <p class="text-xs text-gray-500 mt-1">Your key is saved in your browser. Get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Google AI Studio</a>.</p>
+            <p class="text-xs text-red-600 font-medium mt-1">
+              For instructions, watch this video: <a href="https://drive.google.com/file/d/1gz7rXEpBGzgW0zhe5fY30eZY7AVuohyx/view?usp=sharing" target="_blank" rel="noopener noreferrer" class="underline hover:text-red-700">Google API Instructions</a>
+            </p>
           </div>
 
           <div class="md:col-span-2">
@@ -327,28 +330,21 @@
       const formattedEnd = new Date(endDate).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric', timeZone:'UTC'});
       const dateRange = `${formattedStart} through ${formattedEnd}`;
 
-      // UPDATED PROMPT: Final simplified version.
-      const systemPrompt = `You are an expert digital marketing strategist for law firms. Produce a professional, client-facing email.
+      // Final, simplified prompt
+      const systemPrompt = `You are an expert digital marketing strategist for law firms. Produce a professional, client-facing email based on the provided SHAPE dashboard screenshot.
 
-Inputs:
-1) A SHAPE performance dashboard screenshot.
-2) A Google Sheets URL (the app will add this link).
-3) A strategist name (replace [Your Name]).
-
-Output (very important):
-- A valid HTML fragment only (no Markdown, no backticks, no code fences).
+- Output valid HTML fragment only.
 - DO NOT write the "Dear..." salutation. The app will add it.
 - Use <p> and <strong> for text; <ul><li> for lists.
-- Do not include a glossary.
+- Do not include <html>, <body>, or <head> tags.
 
 Required Structure:
-- Opening: Start with "This report summarizes the performance of your search engine marketing campaigns for the period of ${formattedStart} through ${formattedEnd}."
-- <p><strong>Executive Summary</strong></p>: A concise <ul> showing COMBINED TOTALS from the screenshot. Must include: Spend, Impressions, Clicks, Conversions, Cost per conversion, CPC, and Conversion Rate.
-- <p><strong>Performance Summary</strong></p>: A breakdown by platform (e.g., LSA, Google Ads). For each platform, list: Spend, Impressions, Clicks, Conversions, CPC, Cost per conversion, and Conversion Rate. IMPORTANT: For LSA campaigns, do NOT display CPC.
-- <p><strong>Insightful Analysis</strong></p>: Leave this section blank for the strategist to fill in.
-- Closing & Signature: The email should end with "Please let me know if you have any questions or if you would like to set up a call to go over performance. Best Regards, [Your Name]".
-
-Tone: Confident, professional, client-focused. Do not invent data.`;
+1. Opening: "This report summarizes the performance of your search engine marketing campaigns for the period of ${formattedStart} through ${formattedEnd}."
+2. <p><strong>Executive Summary</strong></p>: A concise <ul> with COMBINED TOTALS for Spend, Impressions, Clicks, Conversions, Cost per conversion, CPC, and Conversion Rate.
+3. <p><strong>Performance Summary</strong></p>: A breakdown by platform (e.g., LSA, Google Ads). For each platform, list key metrics. IMPORTANT: For LSA campaigns, do NOT display CPC.
+4. <p><strong>Insightful Analysis</strong></p>: This section must be left blank.
+5. Closing & Signature: The email must end with "Please let me know if you have any questions or if you would like to set up a call to go over performance. Best Regards, [Your Name]".
+6. Do NOT include a glossary.`;
 
       const userQuery =
 `Law Firm Name: ${firmName}
@@ -356,7 +352,7 @@ Strategist Name: ${strategistName || '(not provided)'}
 Date Range: ${dateRange}
 Google Sheets URL: ${sheetUrl || '(not provided)'}
 
-Please generate the email body content as HTML only. Do not include the "Dear..." salutation, the Google Sheet link line, or the "Insightful Analysis" content. The app will handle those.`;
+Please generate the email body content as HTML only. Do not include the "Dear..." salutation, the Google Sheet link line, or the "Insightful Analysis" content.`;
 
       const apiUrl=`https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
       diagModel.textContent=modelName;
