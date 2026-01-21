@@ -50,9 +50,9 @@
             <p class="text-xs text-gray-500 mt-1">
               Your key is saved in your browser. Get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Google AI Studio</a>.
             </p>
-            <!-- NEW VIDEO LINK -->
+            <!-- UPDATED VIDEO LINK -->
             <p class="text-xs text-red-600 font-medium mt-1">
-              For instructions, watch this video: <a href="https://drive.google.com/drive/folders/1EoxIVfhPT2vRSVFhyz9poIkXQUwcXIbZ" target="_blank" rel="noopener noreferrer" class="underline hover:text-red-700">Google API Instructions</a>
+              For instructions, watch this video: <a href="https://drive.google.com/file/d/1gz7rXEpBGzgW0zhe5fY30eZY7AVuohyx/view?usp=sharing" target="_blank" rel="noopener noreferrer" class="underline hover:text-red-700">Google API Instructions</a>
             </p>
           </div>
 
@@ -263,6 +263,15 @@
       if (inList) html+='</ul>';
       return html;
     }
+    
+    // RESTORED ensureCTA function
+    const ctaHtml = `<p>If you would like to discuss this report, please schedule a call at your convenience.</p>`;
+    function ensureCTA(html){
+      const lc=html.toLowerCase();
+      if (lc.includes('schedule a call')) return html;
+      const glossIdx = lc.indexOf('<p><strong>glossary of terms');
+      return glossIdx !== -1 ? html.slice(0, glossIdx) + ctaHtml + '\n' + html.slice(glossIdx) : (html + '\n' + ctaHtml);
+    }
 
     const glossaryHtml = `
 <hr>
@@ -380,10 +389,11 @@ Write an email for the law firm client using plain, outcome-focused language.
   - DO NOT write the "Dear..." salutation. The application will add it.
 - Required Structure:
   - Opening: Start with "This report summarizes the performance of your search engine marketing campaigns for the period of ${formattedStart} through ${formattedEnd}."
-  - <p><strong>Executive Summary</strong></p>: A concise <ul> showing COMBINED TOTALS. Must include: Total Spend, Total Impressions, Total Clicks, Total Conversions, overall blended Cost per conversion, overall CPC, and overall Conversion Rate.
-  - <p><strong>Performance Summary</strong></p>: A breakdown by platform (e.g., LSA, Google Ads). For each platform, list: Spend, Impressions, Clicks, Conversions, CPC, Cost per conversion, and Conversion Rate.
+  - <p><strong>Executive Summary</strong></p>: A concise <ul> showing the COMBINED TOTALS for all campaigns on the screenshot. Must include: Total Spend, Total Impressions, Total Clicks, Total Conversions, overall blended Cost per conversion, overall CPC, and overall Conversion Rate.
+  - <p><strong>Performance Summary</strong></p>: A breakdown by platform (e.g., LSA, Google Ads, Microsoft Ads). For each platform, create a sub-section with its own <ul> including: Spend, Impressions, Clicks, Conversions, CPC, Cost per conversion, and Conversion Rate.
   - <p><strong>Insightful Analysis</strong></p> (1-3 client-facing paragraphs).
   - Closing & Signature: "Please let me know if you have any questions or if you would like to set up a call to go over performance. Best Regards, [Your Name]"
+  - Footer: <p><strong>Glossary of Terms</strong></p> with the exact list.
 - Tone: Confident, professional, client-focused. Do not invent data.
 
 ---
@@ -430,7 +440,8 @@ Please generate the email body content as HTML only, followed by the strategist 
 
         emailHtml = toHtmlIfNeeded(emailHtml);
         emailHtml = injectSheetLink(emailHtml, sheetUrl);
-        // Note: ensureCTA and ensureGlossary are removed as per user request to remove those sections.
+        emailHtml = ensureCTA(emailHtml);
+        emailHtml = ensureGlossary(emailHtml);
         emailHtml = applyStrategistName(emailHtml, strategistName);
         emailHtml = buildSalutation(firmName, contactName) + emailHtml;
         
