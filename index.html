@@ -330,21 +330,26 @@
       const formattedEnd = new Date(endDate).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric', timeZone:'UTC'});
       const dateRange = `${formattedStart} through ${formattedEnd}`;
 
-      // Final, simplified prompt
+      // Final simplified prompt with manual closing/analysis
       const systemPrompt = `You are an expert digital marketing strategist for law firms. Produce a professional, client-facing email based on the provided SHAPE dashboard screenshot.
 
-- Output valid HTML fragment only.
+Inputs:
+1) A SHAPE performance dashboard screenshot.
+2) A Google Sheets URL (the app will add this link).
+3) A strategist name (replace [Your Name]).
+
+Output (very important):
+- A valid HTML fragment only (no Markdown, no backticks, no code fences).
 - DO NOT write the "Dear..." salutation. The app will add it.
+- DO NOT write the "Insightful Analysis" or closing lines. The app will add them.
 - Use <p> and <strong> for text; <ul><li> for lists.
-- Do not include <html>, <body>, or <head> tags.
 
 Required Structure:
-1. Opening: "This report summarizes the performance of your search engine marketing campaigns for the period of ${formattedStart} through ${formattedEnd}."
-2. <p><strong>Executive Summary</strong></p>: A concise <ul> with COMBINED TOTALS for Spend, Impressions, Clicks, Conversions, Cost per conversion, CPC, and Conversion Rate.
-3. <p><strong>Performance Summary</strong></p>: A breakdown by platform (e.g., LSA, Google Ads). For each platform, list key metrics. IMPORTANT: For LSA campaigns, do NOT display CPC.
-4. <p><strong>Insightful Analysis</strong></p>: This section must be left blank.
-5. Closing & Signature: The email must end with "Please let me know if you have any questions or if you would like to set up a call to go over performance. Best Regards, [Your Name]".
-6. Do NOT include a glossary.`;
+- Opening: Start with "This report summarizes the performance of your search engine marketing campaigns for the period of ${formattedStart} through ${formattedEnd}."
+- <p><strong>Executive Summary</strong></p>: A concise <ul> with COMBINED TOTALS for Spend, Impressions, Clicks, Conversions, Cost per conversion, CPC, and Conversion Rate.
+- <p><strong>Performance Summary</strong></p>: A breakdown by platform (e.g., LSA, Google Ads). For each platform, list key metrics. IMPORTANT: For LSA campaigns, do NOT display CPC.
+
+Tone: Confident, professional, client-focused. Do not invent data.`;
 
       const userQuery =
 `Law Firm Name: ${firmName}
@@ -352,7 +357,7 @@ Strategist Name: ${strategistName || '(not provided)'}
 Date Range: ${dateRange}
 Google Sheets URL: ${sheetUrl || '(not provided)'}
 
-Please generate the email body content as HTML only. Do not include the "Dear..." salutation, the Google Sheet link line, or the "Insightful Analysis" content.`;
+Please generate the email body content as HTML only, following all instructions.`;
 
       const apiUrl=`https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
       diagModel.textContent=modelName;
@@ -373,15 +378,18 @@ Please generate the email body content as HTML only. Do not include the "Dear...
 
         let html = toHtmlIfNeeded(raw);
         
-        // Manually add the blank analysis section and the closing
-        const closingHtml = `
-          <p><strong>Insightful Analysis</strong></p>
-          <p>&nbsp;</p>
-          <p>Please let me know if you have any questions or if you would like to set up a call to go over performance.</p>
-          <p>Best Regards,</p>
-          <p>[Your Name]</p>
-        `;
-        html += '\n' + closingHtml;
+        // Manually add the blank analysis section and the closing only if they are missing
+        const lc = html.toLowerCase();
+        if (!lc.includes('insightful analysis') && !lc.includes('best regards')) {
+            const closingHtml = `
+              <p><strong>Insightful Analysis</strong></p>
+              <p>&nbsp;</p>
+              <p>Please let me know if you have any questions or if you would like to set up a call to go over performance.</p>
+              <p>Best Regards,</p>
+              <p>[Your Name]</p>
+            `;
+            html += '\n' + closingHtml;
+        }
 
         html = injectSheetLink(html, sheetUrl);
         html = applyStrategistName(html, strategistName);
