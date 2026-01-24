@@ -48,9 +48,6 @@
               <button id="refreshModelsBtn" class="shrink-0 px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">Refresh models</button>
             </div>
             <p class="text-xs text-gray-500 mt-1">Your key is saved in your browser. Get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Google AI Studio</a>.</p>
-            <p class="text-xs text-red-600 font-medium mt-1">
-              For instructions, watch this video: <a href="https://drive.google.com/file/d/1gz7rXEpBGzgW0zhe5fY30eZY7AVuohyx/view?usp=sharing" target="_blank" rel="noopener noreferrer" class="underline hover:text-red-700">Google API Instructions</a>
-            </p>
           </div>
 
           <div class="md:col-span-2">
@@ -109,11 +106,13 @@
 
       <!-- Step 3 -->
       <div>
-        <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Step 3: Google Sheets Link</h2>
+        <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Step 3: Client’s Google Sheets Insight Contacts</h2>
         <div class="mb-3">
-          <label for="contactsUrl" class="block text-sm font-medium text-gray-700 mb-1">Google Sheets URL</label>
+          <label for="contactsUrl" class="block text-sm font-medium text-gray-700 mb-1">Google Sheets URL (optional)</label>
           <input type="url" id="contactsUrl" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Paste share link to add it to the email">
         </div>
+        <p class="text-sm text-gray-500 -mt-1 mb-2">Paste the full contents of the client’s Insight Contacts Google Sheet below. This provides context for the "Insightful Analysis."</p>
+        <textarea id="contactsPaste" rows="10" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition font-mono text-sm" placeholder="Paste the entire sheet (Ctrl/Cmd+V)."></textarea>
       </div>
 
       <!-- Step 4 -->
@@ -135,6 +134,16 @@
             <span class="tooltiptext" id="copyTooltip">Copy to clipboard</span>
           </div>
         </div>
+        
+        <!-- STRATEGIST NOTES SECTION -->
+        <div id="strategistNotesContainer" class="hidden mt-6">
+          <h3 class="text-lg font-semibold text-yellow-800 mb-2 flex items-center">
+            <svg class="h-5 w-5 mr-2 text-yellow-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.636-1.214 2.316-1.214 2.952 0l4.708 8.996c.63 1.206-.29 2.75-1.624 2.75H5.173c-1.334 0-2.254-1.544-1.624-2.75l4.708-8.996zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>
+            <span>Internal Strategist Notes (Not Copied)</span>
+          </h3>
+          <div id="strategistNotesOutput" class="w-full p-4 border border-yellow-300 rounded-lg bg-yellow-50 text-sm font-mono uppercase"></div>
+        </div>
+
       </div>
 
       <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg" role="alert">
@@ -172,12 +181,15 @@
     const imagePreview = document.getElementById('image-preview');
 
     const contactsUrlInput = document.getElementById('contactsUrl');
+    const contactsPaste = document.getElementById('contactsPaste');
 
     const generateBtn = document.getElementById('generateBtn');
     const loadingSpinner = document.getElementById('loading-spinner');
     const buttonText = document.getElementById('button-text');
     const outputDiv = document.getElementById('output');
     const emailOutput = document.getElementById('emailOutput');
+    const strategistNotesContainer = document.getElementById('strategistNotesContainer');
+    const strategistNotesOutput = document.getElementById('strategistNotesOutput');
 
     const errorMessage = document.getElementById('error-message');
     const errorText = document.getElementById('error-text');
@@ -326,30 +338,38 @@
       if (!modelName){ showError('Please load and select a model.'); return; }
       if (!firmName || !startDate || !endDate || !imageBase64){ showError('Please complete all fields and upload a screenshot.'); return; }
 
+      const contactsRaw = document.getElementById('contactsPaste').value || '';
+      const MAX_CONTACTS = 100000;
+      const contactsTrimmed = contactsRaw.length > MAX_CONTACTS ? contactsRaw.slice(0, MAX_CONTACTS) + '\n...[truncated]...' : contactsRaw;
+
       const formattedStart = new Date(startDate).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric', timeZone:'UTC'});
       const formattedEnd = new Date(endDate).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric', timeZone:'UTC'});
       const dateRange = `${formattedStart} through ${formattedEnd}`;
 
-      // Final simplified prompt with manual closing/analysis
-      const systemPrompt = `You are an expert digital marketing strategist for law firms. Produce a professional, client-facing email based on the provided SHAPE dashboard screenshot.
+      // UPDATED PROMPT: Re-added STRATEGIST NOTES part and specified Impressions metric.
+      const systemPrompt = `You are an expert digital marketing strategist for law firms. You will produce two distinct parts: a professional, client-facing email, and a separate, internal-only notes section for the strategist.
 
-Inputs:
-1) A SHAPE performance dashboard screenshot.
-2) A Google Sheets URL (the app will add this link).
-3) A strategist name (replace [Your Name]).
+PART 1: CLIENT-FACING EMAIL
+Write an email for the law firm client using plain, outcome-focused language.
+- Inputs:
+  1) SHAPE performance dashboard screenshot (image).
+  2) Pasted "Insight Contacts" text (for context only, do not summarize separately).
+  3) A Google Sheets URL (the app will handle linking).
+  4) A strategist name (replace [Your Name]).
+- Output:
+  - A valid HTML fragment only (no Markdown, no backticks, no code fences).
+  - DO NOT write the "Dear..." salutation. The application will add it.
+- Required Structure:
+  - Opening: Start with "This report summarizes the performance of your search engine marketing campaigns for the period of ${formattedStart} through ${formattedEnd}."
+  - <p><strong>Executive Summary</strong></p>: A concise <ul> showing the COMBINED TOTALS for all campaigns on the screenshot. Must include: Total Spend, Total Impressions, Total Clicks, Total Conversions, overall blended Cost per conversion, overall CPC, and overall Conversion Rate.
+  - <p><strong>Performance Summary</strong></p>: A breakdown by platform (e.g., LSA, Google Ads). For each platform, create a sub-section with its own <ul> including: Spend, Impressions, Clicks, Conversions, CPC, Cost per conversion, and Conversion Rate.
+  - <p><strong>Insightful Analysis</strong></p> (1-3 paragraphs for the client).
+  - Closing & Signature: "Please let me know if you have any questions or if you would like to set up a call to go over performance. Best Regards, [Your Name]"
+- Tone: Confident, professional, client-focused. Do not invent data.
 
-Output (very important):
-- A valid HTML fragment only (no Markdown, no backticks, no code fences).
-- DO NOT write the "Dear..." salutation. The app will add it.
-- DO NOT write the "Insightful Analysis" or closing lines. The app will add them.
-- Use <p> and <strong> for text; <ul><li> for lists.
-
-Required Structure:
-- Opening: Start with "This report summarizes the performance of your search engine marketing campaigns for the period of ${formattedStart} through ${formattedEnd}."
-- <p><strong>Executive Summary</strong></p>: A concise <ul> with COMBINED TOTALS for Spend, Impressions, Clicks, Conversions, Cost per conversion, CPC, and Conversion Rate.
-- <p><strong>Performance Summary</strong></p>: A breakdown by platform (e.g., LSA, Google Ads). For each platform, list key metrics. IMPORTANT: For LSA campaigns, do NOT display CPC.
-
-Tone: Confident, professional, client-focused. Do not invent data.`;
+---
+PART 2: STRATEGIST NOTES
+After the client email, add a separator "--- STRATEGIST NOTES ---" and then write a separate section with tactical, internal-only recommendations for the PPC strategist. These notes should be in ALL CAPS. Base them on all provided data. Examples: HIGH MISSED CALL RATE, SUGGESTS REVIEWING INTAKE HOURS. | CONSIDER PAUSING KEYWORD 'X' DUE TO HIGH COST.`;
 
       const userQuery =
 `Law Firm Name: ${firmName}
@@ -357,7 +377,10 @@ Strategist Name: ${strategistName || '(not provided)'}
 Date Range: ${dateRange}
 Google Sheets URL: ${sheetUrl || '(not provided)'}
 
-Please generate the email body content as HTML only, following all instructions.`;
+Insight Contacts (for context only, do not summarize separately):
+${contactsTrimmed}
+
+Please generate the email body content as HTML only, followed by the strategist notes as requested. Do not include the "Dear..." salutation or the Google Sheet link line.`;
 
       const apiUrl=`https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
       diagModel.textContent=modelName;
@@ -376,26 +399,30 @@ Please generate the email body content as HTML only, following all instructions.
         let raw = (result?.candidates?.[0]?.content?.parts || []).map(p=>p.text).filter(Boolean).join('\n').trim();
         if (!raw) { showError('The model returned an empty response. Try another model.'); console.log('Full response:', result); return; }
 
-        let html = toHtmlIfNeeded(raw);
+        let emailHtml = raw;
+        let notesHtml = '';
         
-        // Manually add the blank analysis section and the closing only if they are missing
-        const lc = html.toLowerCase();
-        if (!lc.includes('insightful analysis') && !lc.includes('best regards')) {
-            const closingHtml = `
-              <p><strong>Insightful Analysis</strong></p>
-              <p>&nbsp;</p>
-              <p>Please let me know if you have any questions or if you would like to set up a call to go over performance.</p>
-              <p>Best Regards,</p>
-              <p>[Your Name]</p>
-            `;
-            html += '\n' + closingHtml;
+        const separator = /--- STRATEGIST NOTES ---/i;
+        if (separator.test(raw)) {
+          const parts = raw.split(separator);
+          emailHtml = parts[0] || '';
+          notesHtml = parts[1] || '';
         }
 
-        html = injectSheetLink(html, sheetUrl);
-        html = applyStrategistName(html, strategistName);
-        html = buildSalutation(firmName, contactName) + html;
+        emailHtml = toHtmlIfNeeded(emailHtml);
+        emailHtml = injectSheetLink(emailHtml, sheetUrl);
+        emailHtml = applyStrategistName(emailHtml, strategistName);
+        emailHtml = buildSalutation(firmName, contactName) + emailHtml;
         
-        emailOutput.innerHTML = html;
+        emailOutput.innerHTML = emailHtml;
+        
+        if (notesHtml.trim()) {
+          strategistNotesOutput.innerHTML = toHtmlIfNeeded(notesHtml).toUpperCase();
+          strategistNotesContainer.classList.remove('hidden');
+        } else {
+          strategistNotesContainer.classList.add('hidden');
+        }
+
         outputDiv.classList.remove('hidden');
       } catch(e) {
         showError('Network/Request error: ' + e.message);
