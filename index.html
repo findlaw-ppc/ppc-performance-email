@@ -23,10 +23,10 @@
     #dropzone.dragover { border-color: #3b82f6; }
     #dropzone.ready { border-color: #10b981; }
     details > summary { cursor: pointer; }
-    #emailOutput p, #strategistNotesOutput p { margin: 0 0 0.75rem 0; }
-    #emailOutput ul, #strategistNotesOutput ul { margin: 0 0 1rem 1.25rem; list-style: disc; }
-    #emailOutput li, #strategistNotesOutput li { margin: 0.25rem 0; }
-    #emailOutput hr, #strategistNotesOutput hr { border: none; border-top: 1px solid #e5e7eb; margin: 1rem 0; }
+    #emailOutput p { margin: 0 0 0.75rem 0; }
+    #emailOutput ul { margin: 0 0 1rem 1.25rem; list-style: disc; }
+    #emailOutput li { margin: 0.25rem 0; }
+    #emailOutput hr { border: none; border-top: 1px solid #e5e7eb; margin: 1rem 0; }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -34,6 +34,10 @@
     <header class="text-center mb-8">
       <h1 class="text-3xl sm:text-4xl font-bold text-blue-600">FindLaw PPC Performance Email Generator</h1>
       <p class="text-md text-gray-600 mt-2">Create professional client reports in seconds.</p>
+      <!-- NEW INSTRUCTIONAL VIDEO LINK -->
+      <p class="text-sm text-gray-700 mt-4 bg-blue-50 p-3 rounded-lg border border-blue-200">
+        <strong>Need help?</strong> <a href="https://drive.google.com/file/d/13ZYcTjTUpq5nblmYjPPY0sEcjriEls72/view?usp=sharing" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 underline hover:text-blue-700">Watch the instructional video</a> to get started.
+      </p>
     </header>
 
     <main class="bg-white rounded-2xl shadow-lg p-6 sm:p-8 space-y-8">
@@ -377,16 +381,14 @@ Please generate the email body content as HTML only. Do not include the "Dear...
 
         let html = toHtmlIfNeeded(raw);
         
-        // Manually add the blank analysis section and the closing only if they are missing
-        const lc = html.toLowerCase();
-        if (!lc.includes('insightful analysis') && !lc.includes('best regards')) {
-            const closingHtml = `
-              <p><strong>Insightful Analysis</strong></p>
-              <p>&nbsp;</p>
-              <p>Please let me know if you have any questions or if you would like to set up a call to go over performance.</p>
-              <p>Best Regards,</p>
-              <p>[Your Name]</p>
-            `;
+        const closingHtml = `
+          <p><strong>Insightful Analysis</strong></p>
+          <p>&nbsp;</p>
+          <p>Please let me know if you have any questions or if you would like to set up a call to go over performance.</p>
+          <p>Best Regards,</p>
+          <p>[Your Name]</p>
+        `;
+        if (!html.toLowerCase().includes('insightful analysis')) {
             html += '\n' + closingHtml;
         }
 
